@@ -1,16 +1,16 @@
+import os
 from typing import List, Optional, TypedDict
-
-from langchain.output_parsers.openai_tools import JsonOutputToolsParser
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnableConfig
-from langchain_openai import ChatOpenAI
-from langgraph.graph import END, StateGraph
-from langgraph.graph.graph import CompiledGraph
 
 from gen_ui_backend.tools.github import github_repo
 from gen_ui_backend.tools.invoice import invoice_parser
 from gen_ui_backend.tools.weather import weather_data
+from langchain.output_parsers.openai_tools import JsonOutputToolsParser
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnableConfig
+from langchain_openai.chat_models.azure import AzureChatOpenAI
+from langgraph.graph import END, StateGraph
+from langgraph.graph.graph import CompiledGraph
 
 
 class GenerativeUIState(TypedDict, total=False):
@@ -35,7 +35,24 @@ def invoke_model(state: GenerativeUIState, config: RunnableConfig) -> Generative
             MessagesPlaceholder("input"),
         ]
     )
-    model = ChatOpenAI(model="gpt-4o", temperature=0, streaming=True)
+    AZURE_OPENAI_API_BASE = os.environ.get(
+        "AZURE_OPENAI_API_BASE",
+        "https://bionic-health-openai-eastus-2.openai.azure.com/",
+    )
+    AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get(
+        "AZURE_OPENAI_DEPLOYMENT_NAME", "bionic-health-gpt-4o-structured-output"
+    )
+    model = AzureChatOpenAI(
+        api_key=os.environ.get("AZURE_OPENAI_API_KEY", "123"),  # type: ignore
+        azure_endpoint=AZURE_OPENAI_API_BASE,
+        azure_deployment=AZURE_OPENAI_DEPLOYMENT_NAME,
+        api_version="2023-03-15-preview",
+        temperature=0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+    )
+
     tools = [github_repo, invoice_parser, weather_data]
     model_with_tools = model.bind_tools(tools)
     chain = initial_prompt | model_with_tools

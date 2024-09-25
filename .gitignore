@@ -1,2 +1,37 @@
-.env
 .mypy_cache
+__pycache__
+backend/gen_ui_backend/__pycache__/*
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Byte-compiled files
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Other files
+*.DS_Store
+*.db
+*.sqlite3

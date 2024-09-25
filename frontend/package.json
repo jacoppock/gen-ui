@@ -10,6 +10,7 @@
     "format": "yarn prettier --write ./app ./ai ./components ./utils ./lib"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^0.0.53",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@faker-js/faker": "^8.4.1",
@@ -55,7 +56,15 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@medplum/bot-layer": "3.2.10",
+    "@medplum/core": "3.2.10",
+    "@medplum/definitions": "3.2.10",
+    "@medplum/eslint-config": "3.2.10",
+    "@medplum/fhirtypes": "3.2.10",
+    "@medplum/mock": "3.2.10",
+    "@medplum/react": "3.2.10",
+    "ansi-styles": "^6.2.1"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.5",

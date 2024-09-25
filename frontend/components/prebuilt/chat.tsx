@@ -1,21 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
 import { EndpointsContext } from "@/app/agent";
-import { useActions } from "@/utils/client";
 import { LocalContext } from "@/app/shared";
-import { RemoteRunnable } from "@langchain/core/runnables/remote";
-import { Github, GithubLoading } from "./github";
-import { Invoice, InvoiceLoading } from "./invoice";
-import { CurrentWeather, CurrentWeatherLoading } from "./weather";
-import { createStreamableUI, createStreamableValue } from "ai/rsc";
-import { StreamEvent } from "@langchain/core/tracers/log_stream";
-import { AIMessage } from "@/ai/message";
+import { useActions } from "@/utils/client";
+import { useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { HumanMessageText } from "./message";
 
-export interface ChatProps {}
+export interface ChatProps { }
 
 function convertFileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -39,13 +32,17 @@ function FileUploadMessage({ file }: { file: File }) {
   );
 }
 
-export default function Chat() {
+const Chat = ({ response, setResponse }) => {
   const actions = useActions<typeof EndpointsContext>();
 
   const [elements, setElements] = useState<JSX.Element[]>([]);
   const [history, setHistory] = useState<[role: string, content: string][]>([]);
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File>();
+
+  const handleAgentResponse = (newResponse) => {
+    setResponse(newResponse); // Update the response state
+  };
 
   async function onSubmit(input: string) {
     const newElements = [...elements];
@@ -54,67 +51,44 @@ export default function Chat() {
     if (selectedFile) {
       base64File = await convertFileToBase64(selectedFile);
     }
-    const element = await actions.agent({
+
+    // Call the agent function and handle the response
+    const result = await actions.agent({
       input,
       chat_history: history,
       file:
         base64File && fileExtension
           ? {
-              base64: base64File,
-              extension: fileExtension,
-            }
+            base64: base64File,
+            extension: fileExtension,
+          }
           : undefined,
     });
+
+    // Update the response state with the result from the agent
+    handleAgentResponse(result);
 
     newElements.push(
       <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
         {selectedFile && <FileUploadMessage file={selectedFile} />}
         <HumanMessageText content={input} />
         <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
-          {element.ui}
+          {result.ui}
         </div>
-      </div>,
+      </div>
     );
-
-    // consume the value stream to obtain the final string value
-    // after which we can append to our chat history state
-    (async () => {
-      let lastEvent = await element.lastEvent;
-      if (Array.isArray(lastEvent)) {
-        if (lastEvent[0].invoke_model && lastEvent[0].invoke_model.result) {
-          setHistory((prev) => [
-            ...prev,
-            ["human", input],
-            ["ai", lastEvent[0].invoke_model.result],
-          ]);
-        } else if (lastEvent[1].invoke_tools) {
-          setHistory((prev) => [
-            ...prev,
-            ["human", input],
-            [
-              "ai",
-              `Tool result: ${JSON.stringify(lastEvent[1].invoke_tools.tool_result, null)}`,
-            ],
-          ]);
-        } else {
-          setHistory((prev) => [...prev, ["human", input]]);
-        }
-      } else if (lastEvent.invoke_model && lastEvent.invoke_model.result) {
-        setHistory((prev) => [
-          ...prev,
-          ["human", input],
-          ["ai", lastEvent.invoke_model.result],
-        ]);
-      }
-    })();
 
     setElements(newElements);
     setInput("");
     setSelectedFile(undefined);
   }
 
+  useEffect(() => {
+    console.log(response); // Log the response for debugging
+  }, [response]);
+
   return (
-    <div className="w-[70vw] overflow-y-scroll h-[80vh] flex flex-col gap-4 mx-auto border-[1px] border-gray-200 rounded-lg p-3 shadow-sm bg-gray-50/25">
+    <div className="w-[40vw] overflow-y-scroll h-[80vh] flex flex-col gap-4 mx-auto border-[1px] border-gray-200 rounded-lg p-3 shadow-sm bg-gray-50/25">
       <LocalContext.Provider value={onSubmit}>
         <div className="flex flex-col w-full gap-1 mt-auto">{elements}</div>
       </LocalContext.Provider>
@@ -148,4 +122,6 @@ export default function Chat() {
       </form>
     </div>
   );
-}
+};
+
+export default Chat;

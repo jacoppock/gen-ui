@@ -1,16 +1,17 @@
-import { RemoteRunnable } from "@langchain/core/runnables/remote";
-import { exposeEndpoints, streamRunnableUI } from "@/utils/server";
-import "server-only";
-import { StreamEvent } from "@langchain/core/tracers/log_stream";
-import { EventHandlerFields } from "@/utils/server";
-import { Github, GithubLoading } from "@/components/prebuilt/github";
-import { InvoiceLoading, Invoice } from "@/components/prebuilt/invoice";
-import {
-  CurrentWeatherLoading,
-  CurrentWeather,
-} from "@/components/prebuilt/weather";
-import { createStreamableUI, createStreamableValue } from "ai/rsc";
+"use server"; // Mark this file as server-side
+
 import { AIMessage } from "@/ai/message";
+import { Github, GithubLoading } from "@/components/prebuilt/github";
+import { Invoice, InvoiceLoading } from "@/components/prebuilt/invoice";
+import {
+  CurrentWeather,
+  CurrentWeatherLoading,
+} from "@/components/prebuilt/weather";
+import { EventHandlerFields, exposeEndpoints, streamRunnableUI } from "@/utils/server";
+import { RemoteRunnable } from "@langchain/core/runnables/remote";
+import { StreamEvent } from "@langchain/core/tracers/log_stream";
+import { createStreamableUI, createStreamableValue } from "ai/rsc";
+import "server-only"; // Keep this line
 
 const API_URL = "http://localhost:8000/chat";
 
@@ -46,13 +47,31 @@ async function agent(inputs: {
     extension: string;
   };
 }) {
-  "use server";
   const remoteRunnable = new RemoteRunnable({
     url: API_URL,
   });
 
   let selectedToolComponent: ToolComponent | null = null;
   let selectedToolUI: ReturnType<typeof createStreamableUI> | null = null;
+
+  const handleInvokeToolsEvent = (event: StreamEvent) => {
+    const [type] = event.event.split("_").slice(2);
+    if (
+      type !== "end" ||
+      !event.data.output ||
+      typeof event.data.output !== "object" ||
+      event.name !== "invoke_tools"
+    ) {
+      return;
+    }
+
+    if (selectedToolUI && selectedToolComponent) {
+      const toolData = event.data.output.tool_result;
+      selectedToolUI.done(selectedToolComponent.final(toolData));
+      // Instead of setResponse, return the toolData
+      return toolData; // Return the response data
+    }
+  };
 
   /**
    * Handles the 'invoke_model' event by checking for tool calls in the output.
@@ -85,29 +104,6 @@ async function agent(inputs: {
         selectedToolUI = createStreamableUI(selectedToolComponent.loading());
         fields.ui.append(selectedToolUI?.value);
       }
-    }
-  };
-
-  /**
-   * Handles the 'invoke_tools' event by updating the selected tool's UI
-   * with the final state and tool result data.
-   *
-   * @param output - The output object from the 'invoke_tools' event
-   */
-  const handleInvokeToolsEvent = (event: StreamEvent) => {
-    const [type] = event.event.split("_").slice(2);
-    if (
-      type !== "end" ||
-      !event.data.output ||
-      typeof event.data.output !== "object" ||
-      event.name !== "invoke_tools"
-    ) {
-      return;
-    }
-
-    if (selectedToolUI && selectedToolComponent) {
-      const toolData = event.data.output.tool_result;
-      selectedToolUI.done(selectedToolComponent.final(toolData));
     }
   };
 
@@ -164,4 +160,5 @@ async function agent(inputs: {
   );
 }
 
-export const EndpointsContext = exposeEndpoints({ agent });
+// Expose the agent function correctly without setResponse
+export const EndpointsContext = exposeEndpoints({ agent: (inputs) => agent(inputs) });
