@@ -1,21 +1,24 @@
 "use client";
 
 import { EndpointsContext } from "@/app/agent";
-import { LocalContext } from "@/app/shared";
 import { useActions } from "@/utils/client";
-import { useEffect, useState } from "react";
+import { Paperclip, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { HumanMessageText } from "./message";
 
-export interface ChatProps { }
+export interface ChatProps {
+  response: any;
+  setResponse: (response: any) => void;
+}
 
 function convertFileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const base64String = reader.result as string;
-      resolve(base64String.split(",")[1]); // Remove the data URL prefix
+      resolve(base64String.split(",")[1]);
     };
     reader.onerror = (error) => {
       reject(error);
@@ -27,21 +30,21 @@ function convertFileToBase64(file: File): Promise<string> {
 function FileUploadMessage({ file }: { file: File }) {
   return (
     <div className="flex w-full max-w-fit ml-auto">
-      <p>File uploaded: {file.name}</p>
+      <p className="text-sm text-gray-500">File uploaded: {file.name}</p>
     </div>
   );
 }
 
-const Chat = ({ response, setResponse }) => {
+const Chat: React.FC<ChatProps> = ({ response, setResponse }) => {
   const actions = useActions<typeof EndpointsContext>();
-
   const [elements, setElements] = useState<JSX.Element[]>([]);
   const [history, setHistory] = useState<[role: string, content: string][]>([]);
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File>();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleAgentResponse = (newResponse) => {
-    setResponse(newResponse); // Update the response state
+  const handleAgentResponse = (newResponse: any) => {
+    setResponse(newResponse);
   };
 
   async function onSubmit(input: string) {
@@ -52,7 +55,6 @@ const Chat = ({ response, setResponse }) => {
       base64File = await convertFileToBase64(selectedFile);
     }
 
-    // Call the agent function and handle the response
     const result = await actions.agent({
       input,
       chat_history: history,
@@ -65,14 +67,13 @@ const Chat = ({ response, setResponse }) => {
           : undefined,
     });
 
-    // Update the response state with the result from the agent
     handleAgentResponse(result);
 
     newElements.push(
-      <div className="flex flex-col w-full gap-1 mt-auto" key={history.length}>
+      <div className="flex flex-col w-full gap-1 mt-4" key={history.length}>
         {selectedFile && <FileUploadMessage file={selectedFile} />}
         <HumanMessageText content={input} />
-        <div className="flex flex-col gap-1 w-full max-w-fit mr-auto">
+        <div className="flex flex-col gap-1 w-full max-w-fit mr-auto mt-2">
           {result.ui}
         </div>
       </div>
@@ -81,44 +82,62 @@ const Chat = ({ response, setResponse }) => {
     setElements(newElements);
     setInput("");
     setSelectedFile(undefined);
+    setHistory([...history, ["human", input], ["ai", JSON.stringify(result)]]);
   }
 
   useEffect(() => {
-    console.log(response); // Log the response for debugging
-  }, [response]);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [elements]);
 
   return (
-    <div className="w-[40vw] overflow-y-scroll h-[80vh] flex flex-col gap-4 mx-auto border-[1px] border-gray-200 rounded-lg p-3 shadow-sm bg-gray-50/25">
-      <LocalContext.Provider value={onSubmit}>
-        <div className="flex flex-col w-full gap-1 mt-auto">{elements}</div>
-      </LocalContext.Provider>
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-md">
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
+        {elements}
+      </div>
       <form
         onSubmit={async (e) => {
-          e.stopPropagation();
           e.preventDefault();
-          await onSubmit(input);
+          if (input.trim()) {
+            await onSubmit(input.trim());
+          }
         }}
-        className="w-full flex flex-row gap-2"
+        className="p-4 border-t"
       >
-        <Input
-          placeholder="What's the weather like in San Francisco?"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <div className="w-[300px]">
+        <div className="flex items-center space-x-2">
           <Input
-            placeholder="Upload"
-            id="image"
+            placeholder="Type your message..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1"
+          />
+          <label htmlFor="file-upload" className="cursor-pointer">
+            <Paperclip className="h-6 w-6 text-gray-500 hover:text-gray-700" />
+          </label>
+          <input
+            id="file-upload"
             type="file"
             accept="image/*"
+            className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files.length > 0) {
                 setSelectedFile(e.target.files[0]);
               }
             }}
           />
+          <Button type="submit" className="bg-blue-500 hover:bg-blue-600">
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
-        <Button type="submit">Submit</Button>
+        {selectedFile && (
+          <p className="mt-2 text-sm text-gray-500">
+            File selected: {selectedFile.name}
+          </p>
+        )}
       </form>
     </div>
   );

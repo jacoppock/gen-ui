@@ -1,12 +1,7 @@
 "use server"; // Mark this file as server-side
 
 import { AIMessage } from "@/ai/message";
-import { Github, GithubLoading } from "@/components/prebuilt/github";
-import { Invoice, InvoiceLoading } from "@/components/prebuilt/invoice";
-import {
-  CurrentWeather,
-  CurrentWeatherLoading,
-} from "@/components/prebuilt/weather";
+import { ContentLoading, FHIRContext } from "@/components/prebuilt/fhir-content";
 import { EventHandlerFields, exposeEndpoints, streamRunnableUI } from "@/utils/server";
 import { RemoteRunnable } from "@langchain/core/runnables/remote";
 import { StreamEvent } from "@langchain/core/tracers/log_stream";
@@ -25,17 +20,9 @@ type ToolComponentMap = {
 };
 
 const TOOL_COMPONENT_MAP: ToolComponentMap = {
-  "github-repo": {
-    loading: (props?: any) => <GithubLoading {...props} />,
-    final: (props?: any) => <Github {...props} />,
-  },
-  "invoice-parser": {
-    loading: (props?: any) => <InvoiceLoading {...props} />,
-    final: (props?: any) => <Invoice {...props} />,
-  },
-  "weather-data": {
-    loading: (props?: any) => <CurrentWeatherLoading {...props} />,
-    final: (props?: any) => <CurrentWeather {...props} />,
+  "fhir-crud": {
+    loading: (props?: any) => <ContentLoading {...props} />,
+    final: (props?: any) => <FHIRContext {...props} />,
   },
 };
 

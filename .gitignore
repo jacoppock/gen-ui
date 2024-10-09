@@ -1,10 +1,9 @@
 .mypy_cache
-__pycache__
 backend/.env
-# Python cache files
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-
 # Byte-compiled files
 *.pyc
 *.pyo
@@ -34,3 +33,5 @@ build/
 *.DS_Store
 *.db
 *.sqlite3
+
+node_modules/

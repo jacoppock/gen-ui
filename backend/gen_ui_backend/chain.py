@@ -1,9 +1,7 @@
 import os
 from typing import List, Optional, TypedDict
 
-from gen_ui_backend.tools.github import github_repo
-from gen_ui_backend.tools.invoice import invoice_parser
-from gen_ui_backend.tools.weather import weather_data
+from gen_ui_backend.tools.fhir.crud_tool import fhir_crud
 from langchain.output_parsers.openai_tools import JsonOutputToolsParser
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -21,6 +19,7 @@ class GenerativeUIState(TypedDict, total=False):
     """A list of parsed tool calls."""
     tool_result: Optional[dict]
     """The result of a tool call."""
+    patient_id: Optional[str]
 
 
 def invoke_model(state: GenerativeUIState, config: RunnableConfig) -> GenerativeUIState:
@@ -53,10 +52,13 @@ def invoke_model(state: GenerativeUIState, config: RunnableConfig) -> Generative
         max_retries=2,
     )
 
-    tools = [github_repo, invoice_parser, weather_data]
+    tools = [fhir_crud]
     model_with_tools = model.bind_tools(tools)
     chain = initial_prompt | model_with_tools
-    result = chain.invoke({"input": state["input"]}, config)
+    result = chain.invoke(
+        {"input": state["input"]},
+        config,
+    )
 
     if not isinstance(result, AIMessage):
         raise ValueError("Invalid result from model. Expected AIMessage.")
@@ -79,9 +81,7 @@ def invoke_tools_or_return(state: GenerativeUIState) -> str:
 
 def invoke_tools(state: GenerativeUIState) -> GenerativeUIState:
     tools_map = {
-        "github-repo": github_repo,
-        "invoice-parser": invoice_parser,
-        "weather-data": weather_data,
+        "fhir-crud": fhir_crud,
     }
 
     if state["tool_calls"] is not None:
