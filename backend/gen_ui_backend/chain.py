@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List, Optional, TypedDict
 
@@ -10,6 +11,9 @@ from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 class GenerativeUIState(TypedDict, total=False):
     input: HumanMessage
@@ -20,6 +24,7 @@ class GenerativeUIState(TypedDict, total=False):
     tool_result: Optional[dict]
     """The result of a tool call."""
     patient_id: Optional[str]
+    # Add any other fields that might be necessary for your graph execution
 
 
 def invoke_model(state: GenerativeUIState, config: RunnableConfig) -> GenerativeUIState:

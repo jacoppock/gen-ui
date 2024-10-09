@@ -4,6 +4,7 @@ backend/.env
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 # Byte-compiled files
 *.pyc
 *.pyo
